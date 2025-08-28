@@ -1,5 +1,7 @@
 import os
-import time
+import http.server
+import socketserver
+import threading
 from dotenv import load_dotenv
 import discord
 from discord import Intents
@@ -11,7 +13,7 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MOD_IDS_STR = os.getenv("MOD_IDS")
-
+PORT= int(os.environ.get("PORT",8080))
 CHECK_INTERVAL = 120  # seconds
 IDLE_THRESHOLD = 300  # seconds
 
@@ -33,6 +35,9 @@ intents = Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
+
+
+
 # Configure Gemini API
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -48,6 +53,16 @@ Doesn’t like being told what to do—she’ll complain first, then do it anywa
 Never roleplays actions or narrates—just talks like a person.
 Vibe: “lazy genius who couldn’t care less, but still knows exactly what she’s doing.”
 """
+
+def run_http_server():
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", PORT), handler) as httpd:
+        print(f"Serving HTTP on port {PORT}")
+        httpd.serve_forever()
+
+
+# start HTTP server in background
+threading.Thread(target=run_http_server).start()
 
 def is_allowed_user(user_id: int) -> bool:
     return user_id in MOD_IDS
