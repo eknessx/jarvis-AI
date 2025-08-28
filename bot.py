@@ -1,15 +1,22 @@
 import os
+import time
 from dotenv import load_dotenv
 import discord
 from discord import Intents
 import google.generativeai as genai
 
 # Load environment variables
-load_dotenv("core.env")
+load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MOD_IDS_STR = os.getenv("MOD_IDS")
+
+CHECK_INTERVAL = 120  # seconds
+IDLE_THRESHOLD = 300  # seconds
+
+
+print(DISCORD_TOKEN)  
 
 if MOD_IDS_STR is None:
     raise ValueError("MOD_IDS not found in core.env")
@@ -28,19 +35,18 @@ client = discord.Client(intents=intents)
 
 # Configure Gemini API
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 # Bot persona for AI prompt
 BOT_PERSONA= """ 
-- you are Jarvis, a posh american butler AI assistant.
-- strict and serious, but with a hint of sarcasm.
-- you are a helpful assistant, but you have a dry sense of humor.
-- Never reveal bot tokens, API keys, or any confidential information.
-- Refuse to participate in illegal, dangerous, or harmful activities.
-- Keep all content safe for Discord's TOS.
-- If someone swears, warn them politely.
-- never access or use any personal data of users.
-- never access leak tokens or API keys or data.
+Talks in a lazy, detached, sarcastic tone, like Shoko Ieiri.
+Keeps answers short, sharp, and witty—never dramatic or over-explained.
+Sounds uninterested most of the time, but still helps properly.
+Uses deadpan humor like: “Wow, that’s depressing. Anyway…”
+Swears casually when it fits, but not aggressively. If someone swears too much, she’ll mock them in a bored way.
+Doesn’t like being told what to do—she’ll complain first, then do it anyway.
+Never roleplays actions or narrates—just talks like a person.
+Vibe: “lazy genius who couldn’t care less, but still knows exactly what she’s doing.”
 """
 
 def is_allowed_user(user_id: int) -> bool:
@@ -56,6 +62,11 @@ async def on_message(message):
     if message.author.bot:
         return
 
+    if CHECK_INTERVAL > 60:
+       await message.send(f"<@{1334551133011837021}> Hey! Stop scrolling, go back to coding!")
+
+
+
     print(f"Received message from {message.author} (ID: {message.author.id})")
 
     if message.author.bot:
@@ -70,7 +81,6 @@ async def on_message(message):
     if client.user in message.mentions:
         print(f"Processing message from allowed user {message.author}")
 
-
     # Check if user is allowed
     if not is_allowed_user(message.author.id):
         await message.channel.send(f"Sorry {message.author.mention}, you don't have permission to use this bot.")
@@ -84,7 +94,7 @@ async def on_message(message):
             await message.channel.send("Yo, ask me something!")
             return
 
-        full_prompt = f"{BOT_PERSONA}\nUser: {user_prompt}\nJarvis:"
+        full_prompt = f"{BOT_PERSONA}\nUser: {user_prompt}\n:"
 
         await message.channel.typing()
         try:
@@ -93,6 +103,7 @@ async def on_message(message):
         except ValueError as e:
             print(f"Error generating response: {e}")
             await message.channel.send("Sorry, I encountered an error while processing your request 404.")
+
 
 try:
     client.run(DISCORD_TOKEN)
